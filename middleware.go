@@ -35,16 +35,18 @@ func (middleware *DelegatesMessageToHandlerMiddleware) Handle(message Message, n
 }
 
 type AlwaysPublishesMessagesMiddleware struct {
-	mq           rabbit.MQ
-	producerName string
-	nameResolver NameResolver
+	mq                 rabbit.MQ
+	producerName       string
+	nameResolver       NameResolver
+	routingKeyResolver RoutingKeyResolver
 }
 
-func NewAlwaysPublishesMessagesMiddleware(producerName string, mq rabbit.MQ, resolver NameResolver) *AlwaysPublishesMessagesMiddleware {
+func NewAlwaysPublishesMessagesMiddleware(producerName string, mq rabbit.MQ, nameResolver NameResolver, routingKeyResolver RoutingKeyResolver) *AlwaysPublishesMessagesMiddleware {
 	return &AlwaysPublishesMessagesMiddleware{
-		mq:           mq,
-		producerName: producerName,
-		nameResolver: resolver,
+		mq:                 mq,
+		producerName:       producerName,
+		nameResolver:       nameResolver,
+		routingKeyResolver: routingKeyResolver,
 	}
 }
 
@@ -89,7 +91,12 @@ func (middleware *AlwaysPublishesMessagesMiddleware) publish(message Message) er
 		return err
 	}
 
-	messageType, _ := middleware.nameResolver.ReverseResolve(message)
+	messageType, err := middleware.nameResolver.ReverseResolve(message)
+	if err != nil {
+		return err
+	}
+
+	routingKey := middleware.routingKeyResolver.Resolve(message)
 	serializedMessage, err := json.Marshal(message)
 
 	if err != nil {
@@ -110,7 +117,7 @@ func (middleware *AlwaysPublishesMessagesMiddleware) publish(message Message) er
 	producer.PublishWithRoutingKey(
 		amqp.Publishing{
 			Body: payload,
-		}, messageType)
+		}, routingKey)
 
 	return nil
 }
