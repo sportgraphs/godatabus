@@ -3,9 +3,10 @@ package godatabus
 import (
 	"sync"
 	"fmt"
+	"context"
 )
 
-type CommandHandler func(command Command) error
+type CommandHandler func(ctx context.Context, command Command) error
 
 // CommandHandlerRegistry stores the handlers for commands
 type CommandHandlerRegistry interface {

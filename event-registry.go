@@ -3,9 +3,10 @@ package godatabus
 import (
 	"sync"
 	"fmt"
+	"context"
 )
 
-type EventHandler func(event Event)
+type EventHandler func(ctx context.Context, event Event)
 
 // CommandHandlerRegistry stores the handlers for commands
 type EventHandlerRegistry interface {

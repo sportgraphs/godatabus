@@ -4,12 +4,13 @@ import (
 	"github.com/sportgraphs/rabbit"
 	"encoding/json"
 	"github.com/streadway/amqp"
+	"context"
 )
 
-type MiddlewareHandler func(message Message) error
+type MiddlewareHandler func(ctx context.Context, message Message) (context.Context, error)
 
 type Middleware interface {
-	Handle(message Message, next MiddlewareHandler) error
+	Handle(ctx context.Context, message Message, next MiddlewareHandler) (context.Context, error)
 }
 
 type DelegatesMessageToHandlerMiddleware struct {
@@ -22,16 +23,16 @@ func NewDelegatesMessageToHandlerMiddleware(registry CommandHandlerRegistry) *De
 	}
 }
 
-func (middleware *DelegatesMessageToHandlerMiddleware) Handle(message Message, next MiddlewareHandler) error {
+func (middleware *DelegatesMessageToHandlerMiddleware) Handle(ctx context.Context, message Message, next MiddlewareHandler) (context.Context, error) {
 	handler, err := middleware.commandHandlerRegistry.Get(Command(message))
 
 	if err != nil {
-		return err
+		return ctx, err
 	}
 
-	handler(Command(message))
+	handler(ctx, Command(message))
 
-	return next(message)
+	return next(ctx, message)
 }
 
 type AlwaysPublishesMessagesMiddleware struct {
@@ -60,28 +61,28 @@ func NewNotifiesMessageSubscribersMiddleware(registry EventHandlerRegistry) *Not
 	}
 }
 
-func (middleware *NotifiesMessageSubscribersMiddleware) Handle(message Message, next MiddlewareHandler) error {
+func (middleware *NotifiesMessageSubscribersMiddleware) Handle(ctx context.Context, message Message, next MiddlewareHandler) (context.Context, error) {
 	subscribers, err := middleware.eventHandlerRegistry.Get(Event(message))
 
 	if err != nil {
-		return next(message)
+		return next(ctx, message)
 	}
 
 	for _, subscriber := range subscribers {
-		subscriber(Event(message))
+		subscriber(ctx, Event(message))
 	}
 
-	return next(message)
+	return next(ctx, message)
 }
 
-func (middleware *AlwaysPublishesMessagesMiddleware) Handle(message Message, next MiddlewareHandler) error {
+func (middleware *AlwaysPublishesMessagesMiddleware) Handle(ctx context.Context, message Message, next MiddlewareHandler) (context.Context, error) {
 	err := middleware.publish(message)
 
 	if err != nil {
-		return err
+		return ctx, err
 	}
 
-	return next(message)
+	return next(ctx, message)
 }
 
 func (middleware *AlwaysPublishesMessagesMiddleware) publish(message Message) error {

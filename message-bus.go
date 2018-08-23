@@ -1,9 +1,12 @@
 package godatabus
 
-import "sync"
+import (
+	"sync"
+	"context"
+)
 
 type MessageBus interface {
-	Handle(message Message) error
+	Handle(ctx context.Context, message Message) error
 }
 
 type MessageBusSupportingMiddleware struct {
@@ -26,8 +29,8 @@ func (messageBus *MessageBusSupportingMiddleware) AppendMiddleware(middleware Mi
 }
 
 
-func (messageBus *MessageBusSupportingMiddleware) Handle(message Message) error {
-	return messageBus.callableForNextMiddleware(0)(message)
+func (messageBus *MessageBusSupportingMiddleware) Handle(ctx context.Context, message Message) (context.Context, error) {
+	return messageBus.callableForNextMiddleware(0)(ctx, message)
 }
 
 
@@ -35,11 +38,11 @@ func (messageBus *MessageBusSupportingMiddleware) callableForNextMiddleware(inde
 	indexExists := len(messageBus.middlewares) > index
 
 	if false == indexExists {
-		return func(message Message) error {return nil}
+		return func(ctx context.Context, message Message) (context.Context, error) {return ctx, nil}
 	}
 	middleware := messageBus.middlewares[index]
 
-	return func(message Message) error {
-		return middleware.Handle(message, messageBus.callableForNextMiddleware(index + 1))
+	return func(ctx context.Context, message Message) (context.Context, error) {
+		return middleware.Handle(ctx, message, messageBus.callableForNextMiddleware(index + 1))
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"reflect"
+	"context"
 )
 
 type Envelope struct {
@@ -13,8 +14,12 @@ type Envelope struct {
 	Payload string          `json:"payload"`
 }
 
-func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq rabbit.MQ, resolver NameResolver, logger *log.Logger) {
-	mq.SetConsumerHandler(queueName, func(delivery amqp.Delivery) {
+func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq rabbit.MQ, resolver NameResolver, ctx context.Context, logger *log.Logger) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	mq.SetConsumerHandler(queueName, ctx, func(ctx context.Context, delivery amqp.Delivery) {
 		var envelope Envelope
 
 		if err := json.Unmarshal(delivery.Body, &envelope); err != nil {
@@ -44,7 +49,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 			return
 		}
 
-		err = messageBus.Handle(Message(message.(Message)))
+		err = messageBus.Handle(ctx, Message(message.(Message)))
 		if err != nil {
 			delivery.Reject(true)
 
