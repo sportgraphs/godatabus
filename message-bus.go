@@ -6,7 +6,7 @@ import (
 )
 
 type MessageBus interface {
-	Handle(ctx context.Context, message Message) error
+	Handle(ctx context.Context, message Message) (context.Context, error)
 }
 
 type MessageBusSupportingMiddleware struct {
