@@ -49,7 +49,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 			return
 		}
 
-		err = messageBus.Handle(ctx, Message(message.(Message)))
+		_, err = messageBus.Handle(ctx, Message(message.(Message)))
 		if err != nil {
 			delivery.Reject(true)
 
