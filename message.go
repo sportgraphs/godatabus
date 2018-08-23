@@ -10,11 +10,11 @@ type BaseMessage struct {
 }
 
 // GetType returns the command type
-func (b BaseMessage) GetType() string {
+func (b *BaseMessage) GetType() string {
 	return "base"
 }
 
 // IsValid checks validates the message
-func (b BaseMessage) IsValid() bool {
+func (b *BaseMessage) IsValid() bool {
 	return true
 }
