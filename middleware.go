@@ -30,7 +30,10 @@ func (middleware *DelegatesMessageToHandlerMiddleware) Handle(ctx context.Contex
 		return ctx, err
 	}
 
-	handler(ctx, Command(message))
+	err = handler(ctx, Command(message))
+	if err != nil {
+		return ctx, err
+	}
 
 	return next(ctx, message)
 }
@@ -69,7 +72,11 @@ func (middleware *NotifiesMessageSubscribersMiddleware) Handle(ctx context.Conte
 	}
 
 	for _, subscriber := range subscribers {
-		subscriber(ctx, Event(message))
+		err = subscriber(ctx, Event(message))
+
+		if err != nil {
+			return ctx, err
+		}
 	}
 
 	return next(ctx, message)

@@ -6,7 +6,7 @@ import (
 	"context"
 )
 
-type EventHandler func(ctx context.Context, event Event)
+type EventHandler func(ctx context.Context, event Event) error
 
 // CommandHandlerRegistry stores the handlers for commands
 type EventHandlerRegistry interface {
