@@ -24,7 +24,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 		var envelope Envelope
 
 		if err := json.Unmarshal(delivery.Body, &envelope); err != nil {
-			delivery.Reject(true)
+			delivery.Reject(false)
 
 			logger.Println("unable to process raw message")
 
@@ -33,7 +33,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 
 		messageType, err := resolver.Resolve(envelope.Type)
 		if err != nil {
-			delivery.Reject(true)
+			delivery.Reject(false)
 
 			logger.Printf("unable to resolve message type %s", envelope.Type)
 
@@ -43,7 +43,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 		message := messageValue.Interface()
 
 		if err := json.Unmarshal([]byte(envelope.Payload), &message); err != nil {
-			delivery.Reject(true)
+			delivery.Reject(false)
 
 			logger.Printf("unable to process message payload for %s (%s)", envelope.Type, err)
 
