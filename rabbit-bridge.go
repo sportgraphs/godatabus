@@ -1,17 +1,18 @@
 package godatabus
 
 import (
-	"github.com/streadway/amqp"
-	"github.com/sportgraphs/rabbit"
+	"context"
 	"encoding/json"
 	"log"
 	"reflect"
-	"context"
+
+	"github.com/sportgraphs/rabbit"
+	"github.com/streadway/amqp"
 )
 
 type Envelope struct {
-	Type    string          `json:"type"`
-	Payload string          `json:"payload"`
+	Type    string `json:"type"`
+	Payload string `json:"payload"`
 }
 
 func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq rabbit.MQ, resolver NameResolver, ctx context.Context, logger *log.Logger) {
@@ -38,7 +39,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 
 			return
 		}
-		messageValue := reflect.New(messageType)
+		messageValue := reflect.New(messageType.Elem())
 		message := messageValue.Interface()
 
 		if err := json.Unmarshal([]byte(envelope.Payload), &message); err != nil {
@@ -51,7 +52,7 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 
 		_, err = messageBus.Handle(ctx, Message(message.(Message)))
 		if err != nil {
-			delivery.Reject(true)
+			handleRejectWithRetries(&delivery)
 
 			logger.Printf("unable to handle message for %s (%s)", envelope.Type, err)
 
@@ -62,4 +63,19 @@ func InitializeRabbitMessageHandler(queueName string, messageBus MessageBus, mq 
 			return
 		}
 	})
+}
+
+const retryAttemptsHeader string = "retry-attempts"
+const maxAttempts int = 3
+
+func handleRejectWithRetries(delivery *amqp.Delivery) {
+	retries, ok := delivery.Headers[retryAttemptsHeader]
+	iretries := 0
+	if ok {
+		iretries = retries.(int)
+	}
+	iretries++
+	delivery.Headers[retryAttemptsHeader] = iretries
+
+	delivery.Reject(iretries <= maxAttempts)
 }
